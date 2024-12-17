@@ -1,25 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
-  Button,
   Image,
   StyleSheet,
   Alert,
-} from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import axios from 'axios';
+  ActivityIndicator,
+  TouchableOpacity,
+} from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import axios from "axios";
 
 const App = () => {
   const [imageUri, setImageUri] = useState(null);
-  const [prediction, setPrediction] = useState('');
+  const [prediction, setPrediction] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // Function to pick an image from the library
   const handleImagePicker = async () => {
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permissionResult =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permissionResult.granted) {
-      Alert.alert('Permission Denied', 'You need to grant permissions to access the library!');
+      Alert.alert(
+        "Permission Denied",
+        "You need to grant permissions to access the library!"
+      );
       return;
     }
 
@@ -33,12 +38,14 @@ const App = () => {
     }
   };
 
-  // Function to open the camera
   const handleCamera = async () => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
 
     if (!permissionResult.granted) {
-      Alert.alert('Permission Denied', 'You need to grant permissions to access the camera!');
+      Alert.alert(
+        "Permission Denied",
+        "You need to grant permissions to access the camera!"
+      );
       return;
     }
 
@@ -52,47 +59,98 @@ const App = () => {
     }
   };
 
-  // Predict skin cancer from image
   const handlePrediction = async () => {
     if (!imageUri) {
-      Alert.alert('Error', 'Please select or capture an image first!');
+      Alert.alert("Error", "Please select or capture an image first!");
       return;
     }
 
+    setLoading(true);
+
     try {
       const formData = new FormData();
-      formData.append('file', {
+      formData.append("file", {
         uri: imageUri,
-        type: 'image/jpeg',
-        name: 'hand.jpg',
+        type: "image/jpeg",
+        name: "hand.jpg",
       });
 
-      // Replace 'YOUR_API_URL' with your backend or model endpoint
-      const response = await axios.post('http://192.168.1.125:5000/predict', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const response = await axios.post(
+        "http://192.168.1.125:5000/predict",
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
 
-      setPrediction(response.data.prediction); // Assuming API returns { prediction: 'Malignant' }
+      setPrediction(response.data.prediction);
     } catch (error) {
-      console.log(error)
-      // console.error(error);
-      Alert.alert('Error', 'Prediction failed, please try again later.');
+      console.log(error);
+      Alert.alert("Error", "Prediction failed, please try again later.");
+    } finally {
+      setLoading(false);
     }
   };
 
+  const CustomButton = ({ title, onPress, backgroundColor }) => (
+    <TouchableOpacity
+      style={[styles.button, { backgroundColor }]}
+      onPress={onPress}
+    >
+      <Text style={styles.buttonText}>{title}</Text>
+    </TouchableOpacity>
+  );
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Skin Cancer Prediction</Text>
-      <View style={styles.buttonContainer}>
-        <Button title="Open Camera" onPress={handleCamera} />
-        <Button title="Upload Picture" onPress={handleImagePicker} />
+      <View style={styles.header}>
+        <Image source={require("./assets/logo.png")} style={styles.logo} />
+
+        <Text style={styles.title}>Skin Cancer Prediction</Text>
       </View>
-      {imageUri && (
-        <Image source={{ uri: imageUri }} style={styles.image} />
+      <View style={styles.buttonContainer}>
+        <CustomButton
+          title="Open Camera"
+          onPress={handleCamera}
+          backgroundColor="#DEAA79"
+        />
+        <CustomButton
+          title="Upload Picture"
+          onPress={handleImagePicker}
+          backgroundColor="#B99470"
+        />
+      </View>
+      {loading ? (
+        <ActivityIndicator
+          size="large"
+          color="#DEAC80"
+          style={styles.spinner}
+        />
+      ) : (
+        <CustomButton
+          title="Predict"
+          onPress={handlePrediction}
+          backgroundColor="#B5C18E"
+        />
       )}
-      <Button title="Predict" onPress={handlePrediction} />
+      {imageUri && <Image source={{ uri: imageUri }} style={styles.image} />}
+
       {prediction && (
-        <Text style={styles.result}>Prediction: {prediction}</Text>
+        <Text
+          style={[
+            styles.result,
+            {
+              color:
+                prediction === "Malignant"
+                  ? "#FF2929"
+                  : prediction === "Benign"
+                  ? "#118B50"
+                  : "#333",
+            },
+          ]}
+        >
+          Prediction: {prediction}
+        </Text>
       )}
     </View>
   );
@@ -102,32 +160,60 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f9f9f9',
+    paddingTop: "30%",
+    backgroundColor: "#f5f5f5",
+  },
+  header: {
+    alignItems: "center",
+    marginBottom: 30,
+  },
+  logo: {
+    width: 65,
+    height: 60,
+    textAlign: "center",
+
+    marginRight: 15,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
+    fontSize: 26,
+    fontWeight: "bold",
+    color: "#333",
   },
   buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: "center",
     marginBottom: 20,
-    width: '80%',
+  },
+  button: {
+    paddingVertical: 15,
+    borderRadius: 8,
+    marginVertical: 10,
+    width: "100%",
+    alignSelf: "center",
+  },
+  buttonText: {
+    textAlign: "center",
+    color: "black",
+    fontSize: 16,
+    fontWeight: "bold",
   },
   image: {
-    width: 200,
-    height: 200,
-    borderRadius: 10,
-    marginBottom: 20,
+    width: 220,
+    height: 220,
+    borderRadius: 12,
+    alignSelf: "center",
+    marginVertical: 20,
+    borderColor: "#ddd",
+    borderWidth: 1,
+  },
+  spinner: {
+    marginVertical: 20,
   },
   result: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#007BFF",
     marginTop: 20,
+    textAlign: "center",
   },
 });
 
