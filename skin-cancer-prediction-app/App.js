@@ -68,13 +68,14 @@ const App = () => {
       });
 
       // Replace 'YOUR_API_URL' with your backend or model endpoint
-      const response = await axios.post('YOUR_API_URL', formData, {
+      const response = await axios.post('http://192.168.1.125:5000/predict', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
       setPrediction(response.data.prediction); // Assuming API returns { prediction: 'Malignant' }
     } catch (error) {
-      console.error(error);
+      console.log(error)
+      // console.error(error);
       Alert.alert('Error', 'Prediction failed, please try again later.');
     }
   };
